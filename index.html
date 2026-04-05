@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drug Interaction Checker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .content { padding: 30px; }
+        .search-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+        .input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        #drugSearch {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        #drugSearch:focus { border-color: #667eea; outline: none; }
+        #addDrugBtn {
+            padding: 15px 25px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #addDrugBtn:hover { background: #218838; }
+        .suggestions {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            display: none;
+        }
+        .suggestion-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .suggestion-item:hover { background: #f0f8ff; }
+        .suggestion-item:last-child { border-bottom: none; }
+        .drugs-list {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+        .drugs-list h3 {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #selectedDrugs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 40px;
+        }
+        .drug-tag {
+            background: #667eea;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        .remove-btn {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .check-btn-container { text-align: center; margin-bottom: 30px; }
+        #checkInteractions {
+            padding: 18px 40px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #checkInteractions:hover:not(:disabled) { background: #218838; }
+        #checkInteractions:disabled { background: #6c757d; cursor: not-allowed; }
+        .results-section { display: none; }
+        .results-section.show { display: block; }
+        .results-section h3 {
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .interaction-card {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid;
+        }
+        .high { background: #f8d7da; border-left-color: #dc3545; }
+        .medium { background: #fff3cd; border-left-color: #ffc107; }
+        .low { background: #d1ecf1; border-left-color: #17a2b8; }
+        .no-interactions {
+            background: #d4edda;
+            border-left-color: #28a745;
+            text-align: center;
+            padding: 30px;
+        }
+        .interaction-card h4 { margin-bottom: 10px; }
+        #clearAll {
+            padding: 12px 24px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        @media (max-width: 768px) {
+            .input-group { flex-direction: column; }
+            #drugSearch { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-pills"></i> Drug Interaction Checker</h1>
+            <p>Check for dangerous drug combinations instantly</p>
+        </div>
+
+        <div class="content">
+            <div class="search-section">
+                <div class="input-group">
+                    <input type="text" id="drugSearch" placeholder="Type drug name (Aspirin, Ibuprofen, Warfarin...)">
+                    <button id="addDrugBtn"><i class="fas fa-plus"></i> Add Drug</button>
+                </div>
+                <div id="suggestions" class="suggestions"></div>
+            </div>
+
+            <div class="drugs-list">
+                <h3><i class="fas fa-list"></i> Selected Drugs <span id="drugCount">(0)</span></h3>
+                <div id="selectedDrugs">Click suggestions or type drug names above</div>
+            </div>
+
+            <div class="check-btn-container">
+                <button id="checkInteractions" disabled>
+                    <i class="fas fa-search"></i> Check Interactions (Add 2+ drugs)
+                </button>
+            </div>
+
+            <div id="resultsSection" class="results-section">
+                <h3><i class="fas fa-exclamation-triangle"></i> Interaction Results</h3>
+                <div id="resultsContent"></div>
+                <button id="clearAll"><i class="fas fa-trash"></i> Clear All</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>⚠️ Educational tool only</strong> - Always consult a doctor/pharmacist</p>
+        </div>
+    </div>
+
+    <script>
+        class DrugChecker {
+            constructor() {
+                this.drugs = [
+                    {name:"Aspirin", interactions:["Ibuprofen","Warfarin","Alcohol"], severity:"high", desc:"🚨 CRITICAL: Major bleeding risk"},
+                    {name:"Ibuprofen", interactions:["Aspirin","Lisinopril","Lithium"], severity:"high", desc:"🚨 CRITICAL: Kidney damage risk"},
+                    {name:"Warfarin", interactions:["Aspirin","Amoxicillin","Cranberry"], severity:"high", desc:"🚨 CRITICAL: Bleeding risk"},
+                    {name:"Lisinopril", interactions:["Ibuprofen","Potassium"], severity:"medium", desc:"⚠️ Monitor kidney function"},
+                    {name:"Amoxicillin", interactions:["Warfarin"], severity:"medium", desc:"⚠️ Monitor blood clotting"},
+                    {name:"Metformin", interactions:["Alcohol"], severity:"medium", desc:"⚠️ Lactic acidosis risk"},
+                    {name:"Simvastatin", interactions:["Grapefruit"], severity:"high", desc:"🚨 Statin toxicity risk"},
+                    {name:"Paracetamol", interactions:["Alcohol"], severity:"low", desc:"ℹ️ Liver stress"},
+                    {name:"Omeprazole", interactions:["Clopidogrel"], severity:"medium", desc:"⚠️ Reduced effectiveness"},
+                    {name:"Atorvastatin", interactions:["Grapefruit"], severity:"high", desc:"🚨 Toxicity risk"},
+                    {name:"Alcohol", interactions:["Aspirin","Paracetamol","Metformin"], severity:"high", desc:"🚨 Liver damage"},
+                    {name:"Grapefruit", interactions:["Simvastatin","Atorvastatin"], severity:"high", desc:"🚨 Blocks metabolism"},
+                    {name:"Potassium", interactions:["Lisinopril"], severity:"medium", desc:"⚠️ Hyperkalemia risk"},
+                    {name:"Clopidogrel", interactions:["Omeprazole"], severity:"medium", desc:"⚠️ Reduced effect"},
+                    {name:"Lithium", interactions:["Ibuprofen"], severity:"high", desc:"🚨 Toxicity risk"},
+                    {name:"Cranberry", interactions:["Warfarin"], severity:"medium", desc:"⚠️ Affects clotting"}
+                ];
+                this.selectedDrugs = [];
+                this.init();
+            }
+
+            init() {
+                document.getElementById('drugSearch').addEventListener('input', (e) => this.filterDrugs(e.target.value));
+                document.getElementById('addDrugBtn').addEventListener('click', () => this.addCurrentDrug());
+                document.getElementById('checkInteractions').addEventListener('click', () => this.checkInteractions());
+                document.getElementById('clearAll').addEventListener('click', () => this.clearAll());
+                
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.suggestion-item')) {
+                        this.selectDrug(e.target.closest('.suggestion-item').dataset.drug);
+                    }
+                    if (e.target.closest('.remove-btn')) {
+                        this.removeDrug(e.target.closest('.drug-tag').dataset.drug);
+                    }
+                });
+            }
+
+            filterDrugs(query) {
+                if (query.length < 2) {
+                    document.getElementById('suggestions').innerHTML = '';
+                    document.getElementById('suggestions').style.display = 'none';
+                    return;
+                }
+
+                const matches = this.drugs.filter(d => 
+                    d.name.toLowerCase().includes(query.toLowerCase())
+                ).slice(0, 8);
+
+                const suggestions = document.getElementById('suggestions');
+                suggestions.innerHTML = matches.map(drug => 
+                    `<div class="suggestion-item" data-drug="${drug.name}">
+                        <i class="fas fa-pills"></i> ${drug.name}
+                    </div>`
+                ).join('');
+                suggestions.style.display = matches.length ? 'block' : 'none';
+            }
+
+            selectDrug(drugName) {
+                if (!this.selectedDrugs.includes(drugName)) {
+                    this.selectedDrugs.push(drugName);
+                    this.updateDisplay();
+                }
+                document.getElementById('drugSearch').value = '';
+                document.getElementById('suggestions').style.display = 'none';
+            }
+
+            addCurrentDrug() {
+                const input = document.getElementById('drugSearch').value.trim();
+                if (input && !this.selectedDrugs.includes(input)) {
+                    this.selectedDrugs.push(input);
+                    this.updateDisplay();
+                    document.getElementById('drugSearch').value = '';
+                }
+            }
+
+            removeDrug(drugName) {
+                this.selectedDrugs = this.selectedDrugs.filter(d => d !== drugName);
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                const container = document.getElementById('selectedDrugs');
+                const countEl = document.getElementById('drugCount');
+                const checkBtn = document.getElementById('checkInteractions');
+
+                if (this.selectedDrugs.length === 0) {
+                    container.innerHTML = '<div style="color:#666; padding:10px;">No drugs selected</div>';
+                } else {
+                    container.innerHTML = this.selectedDrugs.map(drug => `
+                        <div class="drug-tag" data-drug="${drug}">
+                            ${drug}
+                            <button class="remove-btn" title="Remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+
+                countEl.textContent = `(${this.selectedDrugs.length})`;
+                checkBtn.disabled = this.selectedDrugs.length < 2;
+                checkBtn.textContent = this.selectedDrugs.length < 2 
+                    ? 'Check Interactions (Add 2+ drugs)' 
+                    : '✅ Check Interactions Now';
+            }
+
+            checkInteractions() {
+                const results = document.getElementById('resultsContent');
+                const section = document.getElementById('resultsSection');
+                
+                const interactions = [];
+                
+                // Find all pairwise interactions
+                for (let i = 0; i < this.selectedDrugs.length; i++) {
+                    for (let j = i + 1; j < this.selectedDrugs.length; j++) {
+                        const drug1 = this.selectedDrugs[i];
+                        const drug2 = this.selectedDrugs[j];
+                        
+                        // Check both directions
+                        let interaction = this.drugs.find(d => 
+                            d.name === drug1 && d.interactions.includes(drug2)
+                        );
+                        if (!interaction) {
+                            interaction = this.drugs.find(d => 
+                                d.name === drug2 && d.interactions.includes(drug1)
+                            );
+                        }
+                        
+                        if (interaction) {
+                            interactions.push({
+                                drugs: [drug1, drug2],
+                                severity: interaction.severity,
+                                desc: interaction.desc
+                            });
+                        }
+                    }
+                }
+
+                if (interactions.length === 0) {
+                    results.innerHTML = `
+                        <div class="interaction-card no-interactions">
+                            <h3><i class="fas fa-check-circle" style="color:#28a745;"></i></h3>
+                            <h4>✅ No Dangerous Interactions Found!</h4>
+                            <p>Your selected medications appear safe to take together.</p>
+                        </div>
+                    `;
+                } else {
+                    results.innerHTML = interactions.map(int => `
+                        <div class="interaction-card ${int.severity}">
+                            <h4><i class="fas fa-${int.severity === 'high' ? 'exclamation-triangle' : 
+                                                   int.severity === 'medium' ? 'exclamation-circle' : 'info-circle'}"></i>
+                                ${int.drugs[0]} + ${int.drugs[1]}
+                            </h4>
+                            <p><strong>${int.severity.toUpperCase()} RISK:</strong> ${int.desc}</p>
+                        </div>
+                    `).join('');
+                }
+
+                section.classList.add('show');
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            clearAll() {
+                this.selectedDrugs = [];
+                document.getElementById('resultsSection').classList.remove('show');
+                this.updateDisplay();
+                document.getElementById('drugSearch').focus();
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new DrugChecker();
+        });
+    </script>
+</body>
+</html>
